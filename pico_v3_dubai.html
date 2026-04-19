@@ -1024,7 +1024,18 @@
             </div>
         </div>
 
-        
+        <div id="pin-overlay">
+            <div class="pin-box">
+                <i class="fas fa-lock pin-icon"></i>
+                <div class="pin-title" data-i18n="pin_title">Επιβεβαίωση Πρόσβασης</div>
+                <div class="pin-desc" data-i18n="pin_desc">Εισάγετε τον 4-ψήφιο κωδικό Διαχειριστή (Demo: 1234)</div>
+                <input type="password" id="admin-pin-input" class="pin-input" maxlength="4" placeholder="••••" autocomplete="off">
+                <div class="pin-actions">
+                    <button class="pin-btn pin-btn-cancel" onclick="PicoApp.Auth.closeLogin()" data-i18n="btn_cancel">Ακύρωση</button>
+                    <button class="pin-btn pin-btn-submit" onclick="PicoApp.Auth.verifyPin()" data-i18n="btn_enter">Είσοδος</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <aside id="main-sidebar">
@@ -1554,7 +1565,7 @@
                     
                     <div style="display: flex; gap: 10px;">
                         <button class="pico-btn pico-btn-outline" title="Εξαγωγή σε Excel" style="height: 42px; width: 42px; padding: 0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-file-excel" style="color: #10b981; font-size: 1.1rem;"></i></button>
-                        <button class="pico-btn pico-btn-primary" style="padding: 0 25px; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; height: 42px;" onclick="PicoApp.Router.navigate('invoice-new', document.querySelector('[data-title-key=\'nav_cogs\']'))">
+                        <button class="pico-btn pico-btn-primary" style="padding: 0 25px; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; height: 42px;" onclick="PicoApp.Modules.Invoices.openInvoiceModal()">
                             <i class="fas fa-plus" style="margin-right: 8px;"></i> ΝΕΟ ΤΙΜΟΛΟΓΙΟ
                         </button>
                     </div>
@@ -1619,175 +1630,12 @@
                 </div>
             </div>
 
-            <div id="view-invoice-new" class="view-section">
+            
+
+            <div id="inv-item-modal" class="pico-modal-overlay" style="z-index: 99999 !important;">
+            <div class="pico-modal-box" style="width: 460px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
                 
-                <style>
-                    .inv-side-panel { width: 320px; background: #fff; padding: 25px; display: flex; flex-direction: column; gap: 20px; flex-shrink: 0; border-right: 1px solid var(--border-light); height: calc(100vh - var(--header-height)); overflow-y: auto; }
-                    .inv-group-title { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-                    
-                    /* 🛠️ Μειώθηκε το margin-bottom στο 50% (από 12px σε 6px) */
-                    .inv-form-row { display: flex; align-items: center; margin-bottom: 6px; }
-                    .inv-form-label { width: 100px; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); flex-shrink: 0; }
-                    .inv-form-input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.85rem; outline: none; background: #fff; color: var(--text-main); font-weight: 400; transition: 0.2s; width: 100%;}
-                    .inv-form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(241,132,24,0.1); }
-                    
-                    .inv-search-box { position: relative; margin-bottom: 10px; }
-                    .inv-search-box input { width: 100%; padding: 10px 15px 10px 35px; border: 1px solid var(--primary); background: #fff8f0; border-radius: 8px; font-size: 0.9rem; font-weight: 500; color: var(--text-main); outline: none; transition: 0.2s; }
-                    .inv-search-box input::placeholder { color: #d97706; font-weight: 400; opacity: 0.6;}
-                    .inv-search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(241,132,24,0.1); }
-                    .inv-search-box > i.fa-search { position: absolute; left: 12px; top: 12px; color: #d97706; }
-                </style>
-
-                <div style="display: flex; height: calc(100vh - var(--header-height)); margin: -25px; background: #f8fafc;">
-                    
-                    <div class="inv-side-panel">
-                        
-                        <div style="margin-bottom: 10px; position: relative; z-index: 50;">
-                            <label style="font-size: 0.75rem; font-weight: 700; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block;"><i class="fas fa-search" style="margin-right: 5px;"></i> Αναζητηση Προμηθευτη</label>
-                            <div class="inv-search-box" style="position: relative;">
-                                <i class="fas fa-search"></i>
-                                <input type="text" id="inv-new-search" placeholder="Γράψτε για αναζήτηση..." autocomplete="off">
-                                <div id="inv-supplier-dropdown" style="position: absolute; top: calc(100% + 5px); left: 0; width: 100%; background: #fff; border: 1px solid var(--border-light); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: none; flex-direction: column; overflow: hidden; max-height: 250px; overflow-y: auto;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 15px;">
-                            <div class="inv-group-title"><i class="fas fa-file-invoice"></i> Στοιχεία Παραστατικού</div>
-                            
-                            <div class="inv-form-row">
-                                <div class="inv-form-label">Ημερομηνία <span style="color:var(--danger)">*</span></div>
-                                <input type="text" id="inv-new-date" class="inv-form-input" placeholder="ΗΗΜΜΕΕ (π.χ. 190426)" autocomplete="off" style="font-weight: 600; color: var(--primary);">
-                            </div>
-                            <div class="inv-form-row">
-                                <div class="inv-form-label">Αρ. Τιμολ. <span style="color:var(--danger)">*</span></div>
-                                <input type="text" id="inv-new-number" class="inv-form-input" placeholder="#...">
-                            </div>
-                            <div class="inv-form-row">
-                                <div class="inv-form-label">Χρήση</div>
-                                <input type="text" id="inv-new-usage" class="inv-form-input" list="inv-usage-list" placeholder="Επιλογή ή νέο..." autocomplete="off">
-                                <datalist id="inv-usage-list"></datalist>
-                            </div>
-                            <div class="inv-form-row" style="margin-bottom: 0;">
-                                <div class="inv-form-label">Πληρωμή</div>
-                                <input type="text" id="inv-new-payment" class="inv-form-input" list="inv-payment-list" placeholder="Επιλογή ή νέο..." autocomplete="off">
-                                <datalist id="inv-payment-list"></datalist>
-                            </div>
-                            
-                            <div style="margin-top: 15px;">
-                                <div style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px;">Γενικές Σημειώσεις</div>
-                                <textarea id="inv-new-notes" class="inv-form-input" style="height: 40px; resize: none;" placeholder="Προαιρετικά..."></textarea>
-                            </div>
-                        </div>
-
-                        <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 15px;">
-                            <div class="inv-group-title"><i class="fas fa-truck"></i> Στοιχεία Προμηθευτή</div>
-                            
-                            <div class="inv-form-row">
-                                <div class="inv-form-label">Επωνυμία <span style="color:var(--danger)">*</span></div>
-                                <input type="text" id="inv-new-sup-name" class="inv-form-input" placeholder="Διακριτικός Τίτλος..." disabled style="background:#f8fafc;">
-                            </div>
-                            <div class="inv-form-row">
-                                <div class="inv-form-label">Α.Φ.Μ.</div>
-                                <input type="text" id="inv-new-sup-afm" class="inv-form-input" placeholder="ΑΦΜ..." disabled style="background:#f8fafc;">
-                            </div>
-                            
-                            <div style="margin-top: 15px; border-top: 1px dashed var(--border-light); padding-top: 10px;">
-                                <div style="margin-bottom: 6px;">
-                                    <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-main);">Λογαριασμοί IBAN</span>
-                                </div>
-                                <div id="inv-new-ibans-container" style="display: flex; flex-direction: column; gap: 8px;">
-                                    <div>
-                                        <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">#1 ΤΡΑΠΕΖΑ</div>
-                                        <input type="text" class="inv-form-input" placeholder="Δεν υπάρχει..." disabled style="background:#f8fafc; font-family: monospace; font-size: 0.8rem;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #f8fafc;" onmouseover="this.style.borderColor='var(--primary)'; this.style.backgroundColor='#fff8f0'" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 1.5rem; color: #94a3b8; margin-bottom: 8px;"></i>
-                            <div style="font-size: 0.85rem; font-weight: 500; color: var(--text-main);">Επισύναψη (PDF/Φωτό)</div>
-                            <div style="font-size: 0.7rem; color: var(--text-muted);">Κλικ για ανέβασμα αρχείου</div>
-                        </div>
-
-                    </div>
-
-                    <div style="flex: 1; display: flex; flex-direction: column; position: relative;">
-                        
-                        <div style="padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); background: #fff;">
-                            
-                            <button class="pico-btn pico-btn-primary" style="padding: 8px 20px; border-radius: 8px; font-weight: 500;"><i class="fas fa-plus"></i> ΠΡΟΣΘΗΚΗ ΥΛΙΚΟΥ</button>
-
-                            <div style="display: flex; align-items: center; gap: 20px;">
-                                <div style="background: #e2e8f0; border-radius: 30px; padding: 4px; display: flex; position: relative; cursor: pointer; width: 220px;">
-                                    <div id="inv-new-type-indicator" style="position: absolute; top: 4px; left: 4px; width: calc(50% - 4px); height: calc(100% - 8px); background: var(--primary); border-radius: 25px; box-shadow: 0 2px 5px rgba(241,132,24,0.3); transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);"></div>
-                                    <div style="flex: 1; text-align: center; font-size: 0.75rem; font-weight: 600; z-index: 1; padding: 6px 0; color: #fff;">ΥΛΙΚΟ (COGS)</div>
-                                    <div style="flex: 1; text-align: center; font-size: 0.75rem; font-weight: 500; z-index: 1; padding: 6px 0; color: var(--text-muted);">ΕΞΟΔΟ (OPEX)</div>
-                                </div>
-                            </div>
-                            
-                        </div>
-
-                        <div style="flex: 1; overflow: auto; background: #fff;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid var(--border-light); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 8%;">ΤΥΠΟΣ</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 8%;">#ID / SKU</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 20%;">ΟΝΟΜΑΣΙΑ ΠΡΟΪΟΝΤΟΣ</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 10%; text-align: center;">ΠΟΣ.</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 8%; text-align: center;">Μ.Μ.</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 12%; text-align: right;">ΚΑΘΑΡΗ ΑΞΙΑ</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 10%; text-align: right;">Τ.ΜΟΝ.</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 8%; text-align: center;">ΦΠΑ %</th>
-                                        <th style="padding: 12px 10px; font-weight: 600; width: 12%; text-align: right; color: var(--primary);">ΣΥΝΟΛΟ</th>
-                                        <th style="padding: 12px 10px; font-weight: 500; width: 4%; text-align: center;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="10" style="padding: 100px 0; text-align: center; color: var(--text-muted); font-size: 0.95rem; font-style: italic;">
-                                            Δεν υπάρχουν είδη στη λίστα...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div style="background: #fff; padding: 20px 30px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
-                            
-                            <div style="display: flex; gap: 15px; align-items: center;">
-                                <button class="pico-btn" onclick="PicoApp.Router.navigate('invoices', document.querySelector('[data-title-key=\'nav_cogs\']'))" style="background: #f1f5f9; color: #64748b; border: none; border-radius: 30px; padding: 10px 24px; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
-                                    ΑΚΥΡΩΣΗ
-                                </button>
-                                
-                                <button class="pico-btn pico-btn-primary" onclick="PicoApp.Modules.Invoices.saveInvoice()" style="background: #d97706; color: #fff; border: none; border-radius: 30px; padding: 10px 28px; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25); transition: 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 15px rgba(217, 119, 6, 0.35)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(217, 119, 6, 0.25)';">
-                                    ΑΠΟΘΗΚΕΥΣΗ
-                                </button>
-                            </div>
-
-                            <div style="display: flex; align-items: center; gap: 30px;">
-                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                                    <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">ΚΑΘΑΡΟ: <span style="font-size: 1.1rem; margin-left: 10px; font-weight: 500;" id="inv-total-net">0.00 €</span></div>
-                                    <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">ΣΥΝΟΛΟ ΦΠΑ: <span style="font-size: 1.1rem; margin-left: 10px; font-weight: 500;" id="inv-total-vat">0.00 €</span></div>
-                                </div>
-                                <div style="border-left: 1px solid var(--border-light); padding-left: 30px; display: flex; flex-direction: column; align-items: flex-end;">
-                                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ</div>
-                                    <div id="inv-grand-total" style="font-size: 2.2rem; font-weight: 500; color: #d97706;">0.00 €</div>
-                                </div>
-                            </div>
-                            
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <div id="inv-item-modal" class="pico-modal-overlay">
-                <div class="pico-modal-box" style="width: 460px; background: #fff; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
-                    
-                    <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 12px 12px 0 0;">
+                <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 12px 12px 0 0;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-box" style="color: #d97706; font-size: 1.2rem;"></i>
                             <h3 id="inv-item-modal-title" style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Νέο Υλικό</h3>
@@ -1810,13 +1658,14 @@
                                 </div>
                                 <div style="flex: 2;">
                                     <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">SKU</label>
-                                    <input type="text" id="inv-item-sku" class="pico-input" style="width: 100%;" placeholder="Κωδ.">
+                                    <input type="text" id="inv-item-sku" class="pico-input" style="width: 100%;" placeholder="Κωδ." oninput="PicoApp.Modules.Invoices.autoFillFromMemory(this.value, 'sku')">
                                 </div>
                             </div>
 
                             <div style="margin-bottom: 12px;">
-                                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px; text-transform: uppercase;">Ονομασια Shop (Pico Pizzeria-Pasteria)</label>
-                                <input type="text" id="inv-item-name" class="pico-input" style="width: 100%; font-weight: 500;" placeholder="Αναζήτηση...">
+                                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px; text-transform: uppercase;">Ονομασια Προϊόντος</label>
+                                <input type="text" id="inv-item-name" class="pico-input" list="inv-item-memory-list" style="width: 100%; font-weight: 500;" placeholder="Αναζήτηση..." autocomplete="off" oninput="PicoApp.Modules.Invoices.autoFillFromMemory(this.value, 'name')">
+                                <datalist id="inv-item-memory-list"></datalist>
                             </div>
 
                             <div style="margin-bottom: 12px;">
@@ -2914,6 +2763,176 @@
         </div>
     </div>
     <div id="print-canvas" style="display: none;"></div>
+
+    <div id="invoice-modal" class="pico-modal-overlay">
+        <div class="pico-modal-box" style="width: 98vw; height: 96vh; max-width: 1800px; display: flex; flex-direction: column; padding: 0; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            
+            <style>
+                .inv-side-panel { width: 320px; background: #fff; padding: 20px; display: flex; flex-direction: column; gap: 20px; flex-shrink: 0; border-right: 1px solid var(--border-light); overflow-y: auto; }
+                .inv-group-title { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+                .inv-form-row { display: flex; align-items: center; margin-bottom: 6px; }
+                .inv-form-label { width: 100px; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); flex-shrink: 0; }
+                .inv-form-input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.85rem; outline: none; background: #fff; color: var(--text-main); font-weight: 400; transition: 0.2s; width: 100%;}
+                .inv-form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(241,132,24,0.1); }
+                .inv-search-box { position: relative; margin-bottom: 10px; }
+                .inv-search-box input { width: 100%; padding: 10px 15px 10px 35px; border: 1px solid var(--primary); background: #fff8f0; border-radius: 8px; font-size: 0.9rem; font-weight: 500; color: var(--text-main); outline: none; transition: 0.2s; }
+                .inv-search-box input::placeholder { color: #d97706; font-weight: 400; opacity: 0.6;}
+                .inv-search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(241,132,24,0.1); }
+                .inv-search-box > i.fa-search { position: absolute; left: 12px; top: 12px; color: #d97706; }
+            </style>
+
+            <div class="pico-modal-header" style="background: #fff; padding: 15px 25px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="background: #fef3c7; color: #d97706; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0; font-size:1.2rem; font-weight:600; color: var(--text-main);">Νέο Τιμολόγιο / Αγορά</h2>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Καταχώρηση παραστατικού</div>
+                    </div>
+                </div>
+                <i class="fas fa-times" style="cursor: pointer; color: var(--text-muted); font-size: 1.4rem; transition: 0.2s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'" onclick="document.getElementById('invoice-modal').classList.remove('active')"></i>
+            </div>
+
+            <div style="display: flex; flex: 1; overflow: hidden;">
+                
+                <div class="inv-side-panel">
+                    <div style="margin-bottom: 10px; position: relative; z-index: 50;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block;"><i class="fas fa-search" style="margin-right: 5px;"></i> Αναζητηση Προμηθευτη</label>
+                        <div class="inv-search-box" style="position: relative;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="inv-new-search" placeholder="Γράψτε για αναζήτηση..." autocomplete="off">
+                            <div id="inv-supplier-dropdown" style="position: absolute; top: calc(100% + 5px); left: 0; width: 100%; background: #fff; border: 1px solid var(--border-light); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: none; flex-direction: column; overflow: hidden; max-height: 250px; overflow-y: auto;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 15px;">
+                        <div class="inv-group-title"><i class="fas fa-file-invoice"></i> Στοιχεία Παραστατικού</div>
+                        <div class="inv-form-row">
+                            <div class="inv-form-label">Ημερομηνία <span style="color:var(--danger)">*</span></div>
+                            <input type="text" id="inv-new-date" class="inv-form-input" placeholder="ΗΗΜΜΕΕ (π.χ. 190426)" autocomplete="off" style="font-weight: 600; color: var(--primary);">
+                        </div>
+                        <div class="inv-form-row">
+                            <div class="inv-form-label">Αρ. Τιμολ. <span style="color:var(--danger)">*</span></div>
+                            <input type="text" id="inv-new-number" class="inv-form-input" placeholder="#...">
+                        </div>
+                        <div class="inv-form-row">
+                            <div class="inv-form-label">Χρήση</div>
+                            <input type="text" id="inv-new-usage" class="inv-form-input" list="inv-usage-list" placeholder="Επιλογή ή νέο..." autocomplete="off">
+                            <datalist id="inv-usage-list"></datalist>
+                        </div>
+                        <div class="inv-form-row" style="margin-bottom: 0;">
+                            <div class="inv-form-label">Πληρωμή</div>
+                            <input type="text" id="inv-new-payment" class="inv-form-input" list="inv-payment-list" placeholder="Επιλογή ή νέο..." autocomplete="off">
+                            <datalist id="inv-payment-list"></datalist>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px;">Γενικές Σημειώσεις</div>
+                            <textarea id="inv-new-notes" class="inv-form-input" style="height: 40px; resize: none;" placeholder="Προαιρετικά..."></textarea>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 12px; padding: 15px;">
+                        <div class="inv-group-title"><i class="fas fa-truck"></i> Στοιχεία Προμηθευτή</div>
+                        <div class="inv-form-row">
+                            <div class="inv-form-label">Επωνυμία <span style="color:var(--danger)">*</span></div>
+                            <input type="text" id="inv-new-sup-name" class="inv-form-input" placeholder="Διακριτικός Τίτλος..." disabled style="background:#f8fafc;">
+                        </div>
+                        <div class="inv-form-row">
+                            <div class="inv-form-label">Α.Φ.Μ.</div>
+                            <input type="text" id="inv-new-sup-afm" class="inv-form-input" placeholder="ΑΦΜ..." disabled style="background:#f8fafc;">
+                        </div>
+                        <div style="margin-top: 15px; border-top: 1px dashed var(--border-light); padding-top: 10px;">
+                            <div style="margin-bottom: 6px;">
+                                <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-main);">Λογαριασμοί IBAN</span>
+                            </div>
+                            <div id="inv-new-ibans-container" style="display: flex; flex-direction: column; gap: 8px;">
+                                <div>
+                                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">#1 ΤΡΑΠΕΖΑ</div>
+                                    <input type="text" class="inv-form-input" placeholder="Δεν υπάρχει..." disabled style="background:#f8fafc; font-family: monospace; font-size: 0.8rem;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; background: #f8fafc;" onmouseover="this.style.borderColor='var(--primary)'; this.style.backgroundColor='#fff8f0'" onmouseout="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc'">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 1.5rem; color: #94a3b8; margin-bottom: 8px;"></i>
+                        <div style="font-size: 0.85rem; font-weight: 500; color: var(--text-main);">Επισύναψη (PDF/Φωτό)</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Κλικ για ανέβασμα αρχείου</div>
+                    </div>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; position: relative;">
+                    
+                    <div style="padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); background: #fff;">
+                        <button class="pico-btn pico-btn-primary" style="padding: 8px 20px; border-radius: 8px; font-weight: 500;" onclick="PicoApp.Modules.Invoices.openItemModal()"><i class="fas fa-plus"></i> ΠΡΟΣΘΗΚΗ ΥΛΙΚΟΥ</button>
+
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="background: #e2e8f0; border-radius: 30px; padding: 4px; display: flex; position: relative; cursor: pointer; width: 220px;">
+                                <div id="inv-new-type-indicator" style="position: absolute; top: 4px; left: 4px; width: calc(50% - 4px); height: calc(100% - 8px); background: var(--primary); border-radius: 25px; box-shadow: 0 2px 5px rgba(241,132,24,0.3); transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);"></div>
+                                <div style="flex: 1; text-align: center; font-size: 0.75rem; font-weight: 600; z-index: 1; padding: 6px 0; color: #fff;">ΥΛΙΚΟ (COGS)</div>
+                                <div style="flex: 1; text-align: center; font-size: 0.75rem; font-weight: 500; z-index: 1; padding: 6px 0; color: var(--text-muted);">ΕΞΟΔΟ (OPEX)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="flex: 1; overflow: auto; background: #fff;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.75rem; white-space: nowrap;">
+                            <thead style="position: sticky; top: 0; background: #fff; z-index: 10;">
+                                <tr style="border-bottom: 2px solid var(--border-light); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <th style="padding: 12px 8px; font-weight: 600; width: 40px; text-align: center;">ΤΥΠΟΣ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600;">#ID / SKU</th>
+                                    <th style="padding: 12px 8px; font-weight: 600;">ΟΝΟΜΑΣΙΑ ΠΡΟΪΟΝΤΟΣ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; color: #94a3b8;">ΟΝΟΜΑΣΙΑ ΠΡΟΜΗΘΕΥΤΗ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; color: #94a3b8;">ΚΑΤΗΓΟΡΙΑ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; color: #94a3b8;">ΚΑΤ. ΕΞΟΔΩΝ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center;">ΠΟΣ.</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center;">Μ.Μ.</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: right;">ΚΑΘΑΡΗ ΑΞΙΑ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: right;">Τ.ΜΟΝ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center;">ΦΠΑ %</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: right; color: #94a3b8;">ΑΞΙΑ ΦΠΑ</th>
+                                    <th style="padding: 12px 8px; font-weight: 700; text-align: right; color: var(--primary);">ΣΥΝΟΛΟ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center; color: #94a3b8;">ΛΗΞΗ</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center;">Δ%</th>
+                                    <th style="padding: 12px 8px; font-weight: 600; text-align: center; width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inv-lines-body">
+                                <tr>
+                                    <td colspan="16" style="padding: 100px 0; text-align: center; color: var(--text-muted); font-size: 0.95rem; font-style: italic;">
+                                        Δεν υπάρχουν είδη στη λίστα...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background: #fff; padding: 20px 30px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <button class="pico-btn" onclick="document.getElementById('invoice-modal').classList.remove('active')" style="background: #f1f5f9; color: #64748b; border: none; border-radius: 30px; padding: 10px 24px; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                                ΑΚΥΡΩΣΗ
+                            </button>
+                            <button class="pico-btn pico-btn-primary" onclick="PicoApp.Modules.Invoices.saveInvoice()" style="background: #d97706; color: #fff; border: none; border-radius: 30px; padding: 10px 28px; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25); transition: 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 15px rgba(217, 119, 6, 0.35)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(217, 119, 6, 0.25)';">
+                                ΑΠΟΘΗΚΕΥΣΗ
+                            </button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 30px;">
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">ΚΑΘΑΡΟ: <span style="font-size: 1.1rem; margin-left: 10px; font-weight: 500;" id="inv-total-net">0.00 €</span></div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">ΣΥΝΟΛΟ ΦΠΑ: <span style="font-size: 1.1rem; margin-left: 10px; font-weight: 500;" id="inv-total-vat">0.00 €</span></div>
+                            </div>
+                            <div style="border-left: 1px solid var(--border-light); padding-left: 30px; display: flex; flex-direction: column; align-items: flex-end;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">ΤΕΛΙΚΟ ΠΛΗΡΩΤΕΟ</div>
+                                <div id="inv-grand-total" style="font-size: 2.2rem; font-weight: 500; color: #d97706;">0.00 €</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
 </body>
     
@@ -3272,6 +3291,8 @@
                         // 🛠️ Φόρτωση των Τραπεζών
                         const savedBanks = localStorage.getItem('pico_sup_banks');
                         if (savedBanks) this.Banks = JSON.parse(savedBanks);
+                        
+                        this.renderBanks();
                     },
 
                     save: function() {
@@ -3286,6 +3307,7 @@
                     },
 
                     renderBanks: function() {
+                        // Επειδή το datalist είναι μέσα στο modal
                         const list = document.getElementById('pico-bank-list');
                         if(list) list.innerHTML = this.Banks.map(b => `<option value="${b}">`).join('');
                     },
@@ -3629,9 +3651,15 @@
                     activeSupplierId: null,
                     currentType: 'cogs', // 'cogs' = ΥΛΙΚΟ, 'opex' = ΕΞΟΔΟ
                     
-                    // Μνήμη για τα έξυπνα dropdowns
                     Usages: ['Παραγωγή', 'Γενικά Έξοδα', 'Πάγια'],
                     Payments: ['Επί Πιστώσει', 'Μετρητά', 'Τράπεζα', 'Εταιρική Κάρτα'],
+                    
+                    // 🧠 MASTER ITEM MEMORY (Προσωρινή μέχρι να συνδεθεί με τις Πρώτες Ύλες)
+                    ItemMemory: [
+                        { sku: '411352', name: 'AMITA Motion 330ml', category: '18. ΧΥΜΟΙ', expCategory: 'soft drinks', unit: 'τεμ', vat: 13, lastPrice: 0.93, lastSup: 'AMITA 330', lastDate: '12/03/2026' },
+                        { sku: '1001', name: 'Αλεύρι Τ.70', category: '01. ΖΥΜΕΣ', expCategory: 'flour', unit: 'kg', vat: 13, lastPrice: 0.85, lastSup: 'Μύλοι Α.Ε.', lastDate: '15/04/2026' },
+                        { sku: '2005', name: 'Coca Cola 330ml', category: '19. ΑΝΑΨΥΚΤΙΚΑ', expCategory: 'soft drinks', unit: 'τεμ', vat: 24, lastPrice: 0.45, lastSup: 'Κάβα', lastDate: '10/04/2026' }
+                    ],
 
                     init: function() {
                         const saved = localStorage.getItem('pico_invoices');
@@ -3643,6 +3671,9 @@
                         const savedPayments = localStorage.getItem('pico_inv_payments');
                         if (savedPayments) this.Payments = JSON.parse(savedPayments);
                         
+                        const savedItems = localStorage.getItem('pico_inv_items');
+                        if (savedItems) this.ItemMemory = JSON.parse(savedItems);
+
                         this.renderDatalists();
                         this.bindEvents();
                     },
@@ -3651,6 +3682,7 @@
                         localStorage.setItem('pico_invoices', JSON.stringify(this.Data));
                         localStorage.setItem('pico_inv_usages', JSON.stringify(this.Usages));
                         localStorage.setItem('pico_inv_payments', JSON.stringify(this.Payments));
+                        localStorage.setItem('pico_inv_items', JSON.stringify(this.ItemMemory));
                     },
 
                     renderDatalists: function() {
@@ -3659,10 +3691,12 @@
                         
                         const pList = document.getElementById('inv-payment-list');
                         if(pList) pList.innerHTML = this.Payments.map(p => `<option value="${p}">`).join('');
+                        
+                        const iList = document.getElementById('inv-item-memory-list');
+                        if(iList) iList.innerHTML = this.ItemMemory.map(i => `<option value="${i.name}">`).join('');
                     },
 
                     bindEvents: function() {
-                        // 1. Έξυπνη Αναζήτηση Προμηθευτών
                         const searchInput = document.getElementById('inv-new-search');
                         const searchDrop = document.getElementById('inv-supplier-dropdown');
                         
@@ -3679,7 +3713,7 @@
                                     html += `
                                         <div style="padding: 10px 15px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'" onclick="PicoApp.Modules.Invoices.selectSupplier('${s.id}')">
                                             <div style="font-weight: 500; font-size: 0.85rem; color: var(--text-main);">${s.title}</div>
-                                            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: inherit;">${s.afm || ''}</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">${s.afm || ''}</div>
                                         </div>
                                     `;
                                 });
@@ -3702,73 +3736,50 @@
                                     if (!q) return;
                                     let sups = (PicoApp.Modules.Suppliers && PicoApp.Modules.Suppliers.Data) ? PicoApp.Modules.Suppliers.Data : [];
                                     let filtered = sups.filter(s => (s.title && s.title.toLowerCase().includes(q)) || (s.afm && s.afm.includes(q)));
-                                    if (filtered.length > 0) {
-                                        PicoApp.Modules.Invoices.selectSupplier(filtered[0].id);
-                                        e.target.blur();
-                                    } else {
-                                        searchDrop.style.display = 'none'; PicoApp.Modules.Suppliers.openModal();
-                                    }
+                                    if (filtered.length > 0) { PicoApp.Modules.Invoices.selectSupplier(filtered[0].id); e.target.blur(); } 
+                                    else { searchDrop.style.display = 'none'; PicoApp.Modules.Suppliers.openModal(); }
                                 }
                             });
                             document.addEventListener('click', (e) => { if(e.target !== searchInput && !searchDrop.contains(e.target)) searchDrop.style.display = 'none'; });
                         }
 
-                        // 2. 🚀 ΜΑΓΙΚΗ ΗΜΕΡΟΜΗΝΙΑ (Auto-Format 190426 -> 19 Απριλίου 26)
                         const dateInput = document.getElementById('inv-new-date');
                         if (dateInput) {
                             const today = new Date();
                             const monthsGen = PicoApp.i18n.t('months_gen') || ['Ιανουαρίου', 'Φεβρουαρίου', 'Μαρτίου', 'Απριλίου', 'Μαΐου', 'Ιουνίου', 'Ιουλίου', 'Αυγούστου', 'Σεπτεμβρίου', 'Οκτωβρίου', 'Νοεμβρίου', 'Δεκεμβρίου'];
-                            // Default σημερινή
                             if(!dateInput.value) {
                                 dateInput.value = `${today.getDate()} ${monthsGen[today.getMonth()]} ${String(today.getFullYear()).slice(-2)}`;
                                 dateInput.setAttribute('data-raw', today.toISOString().split('T')[0]);
                             }
 
                             dateInput.addEventListener('input', function(e) {
-                                let val = this.value.replace(/[^0-9]/g, ''); // Καθαρίζει κενά/γράμματα
+                                let val = this.value.replace(/[^0-9]/g, '');
                                 if (val.length === 6 || val.length === 8) {
-                                    let d = val.substring(0, 2);
-                                    let m = val.substring(2, 4);
-                                    let y = val.length === 6 ? '20' + val.substring(4, 6) : val.substring(4, 8);
-                                    
+                                    let d = val.substring(0, 2); let m = val.substring(2, 4); let y = val.length === 6 ? '20' + val.substring(4, 6) : val.substring(4, 8);
                                     let mIndex = parseInt(m, 10) - 1;
                                     if (monthsGen[mIndex] && parseInt(d, 10) <= 31 && parseInt(d, 10) > 0) {
                                         this.value = `${parseInt(d, 10)} ${monthsGen[mIndex]} ${y.slice(-2)}`;
                                         this.setAttribute('data-raw', `${y}-${m}-${d}`);
-                                        this.blur(); // Κλείνει το πληκτρολόγιο
+                                        this.blur();
                                     }
                                 }
                             });
-                            // Click = επιλέγει όλο το κείμενο για γρήγορο σβήσιμο
                             dateInput.addEventListener('focus', function() { this.select(); });
                         }
 
-                        // 3. Toggle Switch (Υλικό vs Έξοδο)
                         const typeToggle = document.getElementById('inv-new-type-indicator');
                         if(typeToggle) {
                             typeToggle.parentElement.addEventListener('click', () => {
                                 this.currentType = this.currentType === 'cogs' ? 'opex' : 'cogs';
                                 if (this.currentType === 'opex') {
-                                    typeToggle.style.left = 'calc(50% + 2px)';
-                                    typeToggle.style.backgroundColor = 'var(--text-muted)';
-                                    typeToggle.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+                                    typeToggle.style.left = 'calc(50% + 2px)'; typeToggle.style.backgroundColor = 'var(--text-muted)'; typeToggle.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
                                 } else {
-                                    typeToggle.style.left = '4px';
-                                    typeToggle.style.backgroundColor = 'var(--primary)';
-                                    typeToggle.style.boxShadow = '0 2px 5px rgba(241,132,24,0.3)';
+                                    typeToggle.style.left = '4px'; typeToggle.style.backgroundColor = 'var(--primary)'; typeToggle.style.boxShadow = '0 2px 5px rgba(241,132,24,0.3)';
                                 }
                             });
                         }
-
-                        // 4. Hook Κουμπιού "ΠΡΟΣΘΗΚΗ ΥΛΙΚΟΥ" 
-                        const addRowBtn = document.querySelector('#view-invoice-new .pico-btn-primary');
-                        if (addRowBtn && addRowBtn.innerText.includes('ΠΡΟΣΘΗΚΗ ΥΛΙΚΟΥ')) {
-                            addRowBtn.removeAttribute('onclick');
-                            addRowBtn.addEventListener('click', () => this.openItemModal());
-                        }
                     },
 
-                    // --- ΛΕΙΤΟΥΡΓΙΕΣ ΠΡΟΜΗΘΕΥΤΗ ---
                     selectSupplier: function(id) {
                         this.activeSupplierId = id;
                         const sup = PicoApp.Modules.Suppliers.Data.find(s => s.id === id);
@@ -3776,11 +3787,9 @@
 
                         document.getElementById('inv-new-search').value = sup.title;
                         document.getElementById('inv-supplier-dropdown').style.display = 'none';
-                        
                         document.getElementById('inv-new-sup-name').value = sup.title;
                         document.getElementById('inv-new-sup-afm').value = sup.afm || '';
                         
-                        // 🚀 ΚΑΡΦΩΝΟΥΜΕ ΤΑ ΟΛΑ ΤΑ IBAN ΜΕ ΤΗ ΝΕΑ ΕΜΦΑΝΙΣΗ
                         const ibansContainer = document.getElementById('inv-new-ibans-container');
                         if (ibansContainer) {
                             if (sup.ibans && sup.ibans.length > 0) {
@@ -3803,36 +3812,37 @@
                             }
                         }
                         
-                        // 🚀 ΚΑΡΦΩΝΟΥΜΕ ΤΗΝ ΠΛΗΡΩΜΗ ΒΑΣΕΙ ΣΥΜΦΩΝΙΑΣ
                         const payInput = document.getElementById('inv-new-payment');
-                        if (payInput) {
-                            payInput.value = (sup.terms === 'Μετρητοίς') ? 'Μετρητά' : 'Επί Πιστώσει';
+                        if (payInput) payInput.value = (sup.terms === 'Μετρητοίς') ? 'Μετρητά' : 'Επί Πιστώσει';
+                    },
+
+                    // 🧠 ΕΞΥΠΝΗ ΣΥΜΠΛΗΡΩΣΗ ΑΠΟ ΤΗ ΜΝΗΜΗ
+                    autoFillFromMemory: function(value, source) {
+                        if(!value) return;
+                        
+                        let item = null;
+                        if (source === 'sku') item = this.ItemMemory.find(i => i.sku === value.trim());
+                        else if (source === 'name') item = this.ItemMemory.find(i => i.name.toLowerCase() === value.toLowerCase().trim());
+
+                        if (item) {
+                            if(source === 'sku') document.getElementById('inv-item-name').value = item.name;
+                            if(source === 'name') document.getElementById('inv-item-sku').value = item.sku;
+                            
+                            document.getElementById('inv-item-cat').value = item.category || '';
+                            document.getElementById('inv-item-exp-cat').value = item.expCategory || '';
+                            document.getElementById('inv-item-unit').value = item.unit || 'τεμ';
+                            document.getElementById('inv-item-vat-perc').value = item.vat || 13;
+                            
+                            document.getElementById('inv-item-net').setAttribute('data-last-price', item.lastPrice || 0);
+                            document.getElementById('inv-item-net').setAttribute('data-last-sup', item.lastSup || '-');
+                            document.getElementById('inv-item-net').setAttribute('data-last-date', item.lastDate || '-');
+                            
+                            this.calcItemModal();
+                        } else {
+                            document.getElementById('inv-item-net').removeAttribute('data-last-price');
                         }
                     },
 
-                    // 💾 ΛΟΓΙΚΗ ΑΠΟΘΗΚΕΥΣΗΣ ΤΙΜΟΛΟΓΙΟΥ
-                    saveInvoice: function() {
-                        const usageVal = document.getElementById('inv-new-usage').value.trim();
-                        const payVal = document.getElementById('inv-new-payment').value.trim();
-
-                        // Αν ο χρήστης έγραψε κάτι καινούριο, το μαθαίνουμε!
-                        if(usageVal && !this.Usages.includes(usageVal)) {
-                            this.Usages.push(usageVal);
-                        }
-                        if(payVal && !this.Payments.includes(payVal)) {
-                            this.Payments.push(payVal);
-                        }
-
-                        this.save(); // Αποθηκεύει τα νέα arrays στη μνήμη
-                        this.renderDatalists(); // Ανανεώνει τα dropdowns
-                        
-                        alert("Το τιμολόγιο αποθηκεύτηκε επιτυχώς! (Τα νέα πεδία Χρήσης/Πληρωμής απομνημονεύτηκαν).");
-                        
-                        // Επιστροφή στην κεντρική οθόνη
-                        PicoApp.Router.navigate('invoices', document.querySelector('[data-title-key="nav_cogs"]'));
-                    },
-
-                    // --- ΛΕΙΤΟΥΡΓΙΕΣ MODAL ΕΙΔΟΥΣ ---
                     openItemModal: function() {
                         document.getElementById('inv-item-sku').value = '';
                         document.getElementById('inv-item-name').value = '';
@@ -3841,8 +3851,9 @@
                         document.getElementById('inv-item-exp-cat').value = '';
                         document.getElementById('inv-item-exp-date').value = '';
                         document.getElementById('inv-item-qty').value = '1';
-                        document.getElementById('inv-item-unit').value = 'kg';
+                        document.getElementById('inv-item-unit').value = 'τεμ';
                         document.getElementById('inv-item-net').value = '';
+                        document.getElementById('inv-item-net').removeAttribute('data-last-price');
                         document.getElementById('inv-item-vat-perc').value = '13';
                         
                         if(this.activeSupplierId) {
@@ -3878,7 +3889,7 @@
                         const vatAmount = net * (vatP / 100);
                         const total = net + vatAmount;
 
-                        document.getElementById('inv-item-unit-price').innerText = unitPrice.toFixed(2);
+                        document.getElementById('inv-item-unit-price').innerText = unitPrice.toFixed(3);
                         document.getElementById('inv-item-vat-val').innerText = vatAmount.toFixed(2);
                         document.getElementById('inv-item-total').innerText = total.toFixed(2);
                     },
@@ -3887,7 +3898,12 @@
                         const name = document.getElementById('inv-item-name').value.trim();
                         if (!name) { alert("Η Ονομασία είναι υποχρεωτική."); return; }
 
-                        const sku = document.getElementById('inv-item-sku').value.trim();
+                        const sku = document.getElementById('inv-item-sku').value.trim() || '-';
+                        const supName = document.getElementById('inv-item-sup-name').value.trim() || '-';
+                        const cat = document.getElementById('inv-item-cat').value.trim() || '-';
+                        const expCat = document.getElementById('inv-item-exp-cat').value.trim() || '-';
+                        const expDate = document.getElementById('inv-item-exp-date').value.trim() || '-';
+                        
                         const qty = parseFloat(document.getElementById('inv-item-qty').value) || 1;
                         const unit = document.getElementById('inv-item-unit').value;
                         const net = parseFloat(document.getElementById('inv-item-net').value) || 0;
@@ -3897,34 +3913,90 @@
                         const vatAmount = net * (vatP / 100);
                         const total = net + vatAmount;
 
+                        // ΥΠΟΛΟΓΙΣΜΟΣ Δ%
+                        let deltaHtml = `<span style="color: var(--text-muted);">-</span>`;
+                        let tooltipData = '';
+                        const netInput = document.getElementById('inv-item-net');
+                        
+                        if (netInput.hasAttribute('data-last-price')) {
+                            const lastPrice = parseFloat(netInput.getAttribute('data-last-price')) || 0;
+                            const lastSup = netInput.getAttribute('data-last-sup');
+                            const lastDate = netInput.getAttribute('data-last-date');
+                            
+                            if (lastPrice > 0 && unitPrice > 0) {
+                                const delta = ((unitPrice - lastPrice) / lastPrice) * 100;
+                                
+                                tooltipData = `onmousemove="PicoApp.Modules.Invoices.showTooltip(event, ${lastPrice}, '${lastSup}', '${lastDate}')" onmouseout="PicoApp.Modules.Invoices.hideTooltip()"`;
+                                
+                                // Στρογγυλοποίηση και CSS όπως στο v2
+                                const deltaFormatted = delta > 0 ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`;
+                                
+                                if (delta > 2) {
+                                    deltaHtml = `<span style="background: #fef2f2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;" ${tooltipData}>${deltaFormatted}</span>`;
+                                } else if (delta < -2) {
+                                    deltaHtml = `<span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;" ${tooltipData}>${deltaFormatted}</span>`;
+                                } else {
+                                    deltaHtml = `<span style="color: var(--text-muted); font-size: 0.75rem; cursor: pointer;" ${tooltipData}>~0%</span>`;
+                                }
+                            }
+                        }
+
+                        // ΑΠΟΘΗΚΕΥΣΗ ΣΤΗ ΜΝΗΜΗ
+                        const existingItemIndex = this.ItemMemory.findIndex(i => i.name.toLowerCase() === name.toLowerCase());
+                        const newItemData = { sku: sku, name: name, category: cat, expCategory: expCat, unit: unit, vat: vatP, lastPrice: unitPrice, lastSup: supName, lastDate: new Date().toLocaleDateString('el-GR') };
+                        
+                        if (existingItemIndex >= 0) this.ItemMemory[existingItemIndex] = newItemData;
+                        else this.ItemMemory.push(newItemData);
+                        
+                        this.save();
+                        this.renderDatalists();
+
+                        // ΕΙΣΑΓΩΓΗ ΣΤΟΝ ΠΙΝΑΚΑ (ΝΕΟ V2 STYLE)
                         const tbody = document.getElementById('inv-lines-body');
                         if(tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+
+                        // Φτιάχνουμε ένα ψεύτικο ID για τη γραμμή (όπως το #11691 στο screenshot)
+                        const rowId = '#' + Math.floor(10000 + Math.random() * 90000);
 
                         const tr = document.createElement('tr');
                         tr.style.borderBottom = '1px solid var(--border-light)';
                         tr.style.transition = '0.2s';
                         
-                        const typeBadge = this.currentType === 'cogs' 
-                            ? `<span style="background:#fff8f0; color:var(--primary); padding:3px 8px; border-radius:6px; font-size:0.65rem; font-weight:600; border: 1px solid #ffeacc;">ΥΛΙΚΟ</span>` 
-                            : `<span style="background:#f1f5f9; color:var(--text-muted); padding:3px 8px; border-radius:6px; font-size:0.65rem; font-weight:600; border: 1px solid var(--border-light);">ΕΞΟΔΟ</span>`;
+                        const typeIcon = this.currentType === 'cogs' 
+                            ? `<div style="background:#fef3c7; color:#ea580c; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; margin-bottom: 6px;"><i class="fas fa-box"></i></div>` 
+                            : `<div style="background:#f1f5f9; color:#64748b; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; margin-bottom: 6px;"><i class="fas fa-receipt"></i></div>`;
 
+                        // Κρύβουμε τα data-val στο <tr> αντί για inputs, για να δουλεύει η calcTotals
                         tr.innerHTML = `
-                            <td style="padding: 12px 10px;">${typeBadge}</td>
-                            <td style="padding: 12px 10px; color: var(--text-muted); font-size: 0.8rem;">${sku || '---'}</td>
-                            <td style="padding: 12px 10px; font-weight: 500; color: var(--text-main);">${name}</td>
-                            <td style="padding: 12px 10px; text-align: center; font-weight: 500;">${qty}</td>
-                            <td style="padding: 12px 10px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">${unit}</td>
-                            <td style="padding: 12px 10px; text-align: right; font-weight: 500;" class="row-net" data-val="${net}">${net.toFixed(2)}</td>
-                            <td style="padding: 12px 10px; text-align: right; color: var(--text-muted); font-size: 0.8rem;">${unitPrice.toFixed(2)}</td>
-                            <td style="padding: 12px 10px; text-align: center; color: var(--text-muted); font-size: 0.8rem;" class="row-vat" data-perc="${vatP}">${vatP}%</td>
-                            <td style="padding: 12px 10px; text-align: right; font-weight: 600; color: var(--primary); font-size: 0.95rem;">${total.toFixed(2)}</td>
-                            <td style="padding: 12px 10px; text-align: center;">
-                                <i class="fas fa-times" style="color: #fca5a5; cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='#fca5a5'" onclick="PicoApp.Modules.Invoices.deleteRow(this)"></i>
+                            <td style="padding: 15px 10px; width: 40px; text-align: center; vertical-align: top;">
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    ${typeIcon}
+                                    <div style="background: #fee2e2; color: #ef4444; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fee2e2'" onclick="PicoApp.Modules.Invoices.deleteRow(this)">
+                                        <i class="fas fa-trash-alt" style="font-size: 0.85rem;"></i>
+                                    </div>
+                                </div>
                             </td>
+                            <td style="padding: 15px 10px; vertical-align: middle;">
+                                <span style="border: 1px solid var(--border-focus); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">${rowId}</span>
+                            </td>
+                            <td style="padding: 15px 10px; vertical-align: middle; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">${sku}</td>
+                            <td style="padding: 15px 10px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; vertical-align: middle;">${name}</td>
+                            <td style="padding: 15px 10px; color: #64748b; font-size: 0.85rem; font-style: italic; vertical-align: middle;">${supName}</td>
+                            <td style="padding: 15px 10px; color: #64748b; font-size: 0.85rem; vertical-align: middle;">${cat}</td>
+                            <td style="padding: 15px 10px; color: #64748b; font-size: 0.85rem; vertical-align: middle;">${expCat}</td>
+                            <td style="padding: 15px 10px; text-align: center; vertical-align: middle;">
+                                <span style="font-weight: 600; font-size: 1rem; color: var(--text-main);">${qty}</span> <span style="color: #94a3b8; font-size: 0.8rem;">${unit}</span>
+                            </td>
+                            <td style="padding: 15px 10px; text-align: right; vertical-align: middle; color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;" class="row-net" data-val="${net}">${net.toFixed(2)}€</td>
+                            <td style="padding: 15px 10px; text-align: right; color: var(--text-main); font-weight: 600; font-size: 0.9rem; vertical-align: middle;">${unitPrice.toFixed(3)}€</td>
+                            <td style="padding: 15px 10px; text-align: center; color: #64748b; font-size: 0.85rem; vertical-align: middle;" class="row-vat" data-perc="${vatP}">${vatP}%</td>
+                            <td style="padding: 15px 10px; text-align: right; color: #94a3b8; font-size: 0.85rem; vertical-align: middle;">${vatAmount.toFixed(2)}€</td>
+                            <td style="padding: 15px 10px; text-align: right; font-weight: 600; color: #d97706; font-size: 1.05rem; vertical-align: middle;">${total.toFixed(2)}€</td>
+                            <td style="padding: 15px 10px; text-align: center; color: #ef4444; font-size: 0.85rem; vertical-align: middle;">${expDate}</td>
+                            <td style="padding: 15px 10px; text-align: center; vertical-align: middle;">${deltaHtml}</td>
                         `;
                         
                         tbody.appendChild(tr);
-                        document.getElementById('inv-item-modal').classList.remove('active');
                         this.calcTotals();
                     },
 
@@ -3936,7 +4008,7 @@
                         if(tbody.children.length === 0) {
                             tbody.innerHTML = `
                                 <tr>
-                                    <td colspan="10" style="padding: 100px 0; text-align: center; color: var(--text-muted); font-size: 0.95rem; font-style: italic;">
+                                    <td colspan="16" style="padding: 100px 0; text-align: center; color: var(--text-muted); font-size: 0.95rem; font-style: italic;">
                                         Δεν υπάρχουν είδη στη λίστα...
                                     </td>
                                 </tr>
@@ -3965,7 +4037,65 @@
                         document.getElementById('inv-total-net').innerText = totalNet.toFixed(2) + ' €';
                         document.getElementById('inv-total-vat').innerText = totalVat.toFixed(2) + ' €';
                         document.getElementById('inv-grand-total').innerText = grandTotal.toFixed(2) + ' €';
-                    }
+                    },
+                    
+                    // 🎈 TOOLTIP ΓΙΑ ΤΟ Δ%
+                    showTooltip: function(e, prevPrice, prevSup, prevDate) {
+                        const tt = document.getElementById('price-history-tooltip');
+                        if(!tt) return;
+                        
+                        document.getElementById('tt-prev-price').innerText = prevPrice.toFixed(3) + ' € / ' + 'Μ.Μ.';
+                        document.getElementById('tt-prev-sup').innerText = prevSup;
+                        document.getElementById('tt-prev-date').innerText = prevDate;
+                        
+                        const rect = e.target.getBoundingClientRect();
+                        tt.style.left = (rect.left + (rect.width / 2) - 110) + 'px'; 
+                        tt.style.top = (rect.top - 90) + 'px'; 
+                        
+                        tt.style.display = 'block';
+                    },
+                    
+                    hideTooltip: function() {
+                        const tt = document.getElementById('price-history-tooltip');
+                        if(tt) tt.style.display = 'none';
+                    },
+
+                    openInvoiceModal: function() {
+                        // Clear main fields
+                        document.getElementById('inv-new-search').value = '';
+                        document.getElementById('inv-new-date').value = new Date().toISOString().split('T')[0]; // auto fill
+                        document.getElementById('inv-new-number').value = '';
+                        document.getElementById('inv-new-usage').value = '';
+                        document.getElementById('inv-new-payment').value = '';
+                        document.getElementById('inv-new-notes').value = '';
+                        document.getElementById('inv-new-sup-name').value = '';
+                        document.getElementById('inv-new-sup-afm').value = '';
+                        
+                        const ibansContainer = document.getElementById('inv-new-ibans-container');
+                        if(ibansContainer) ibansContainer.innerHTML = `<div><div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px;">#1 ΤΡΑΠΕΖΑ</div><input type="text" class="inv-form-input" placeholder="Δεν υπάρχει..." disabled style="background:#f8fafc; font-family: monospace; font-size: 0.8rem;"></div>`;
+                        
+                        // Clear list
+                        const tbody = document.getElementById('inv-lines-body');
+                        if(tbody) tbody.innerHTML = `<tr><td colspan="16" style="padding: 100px 0; text-align: center; color: var(--text-muted); font-size: 0.95rem; font-style: italic;">Δεν υπάρχουν είδη στη λίστα...</td></tr>`;
+                        
+                        this.calcTotals();
+                        
+                        document.getElementById('invoice-modal').classList.add('active');
+                    },
+
+                    saveInvoice: function() {
+                        const usageVal = document.getElementById('inv-new-usage').value.trim();
+                        const payVal = document.getElementById('inv-new-payment').value.trim();
+
+                        if(usageVal && !this.Usages.includes(usageVal)) this.Usages.push(usageVal);
+                        if(payVal && !this.Payments.includes(payVal)) this.Payments.push(payVal);
+
+                        this.save();
+                        this.renderDatalists();
+                        
+                        alert("Το τιμολόγιο αποθηκεύτηκε επιτυχώς! (Η μνήμη υλικών ενημερώθηκε).");
+                        document.getElementById('invoice-modal').classList.remove('active');
+                    },
                 },
 
                 //  FILE MANAGER MODULE (Με Base64 Προβολή)
@@ -6610,31 +6740,17 @@
             }, // <--- ΕΔΩ ΚΛΕΙΝΟΥΝ ΟΡΙΣΤΙΚΑ ΤΑ MODULES (ΟΛΑ ΜΑΖΙ)
 
             Auth: {
-                initiateLogin: function(role) { 
-                    // Μπαίνει κατευθείαν στον ρόλο χωρίς PIN!
-                    this.grantAccess(role); 
-                },
-                
+                initiateLogin: function(role) { if(role==='manager') { PicoApp.Elements.pinInput.value=''; PicoApp.Elements.pinOverlay.classList.add('active'); setTimeout(() => PicoApp.Elements.pinInput.focus(), 100); } else this.grantAccess('pos'); },
+                closeLogin: function() { PicoApp.Elements.pinOverlay.classList.remove('active'); },
+                verifyPin: function() { if(PicoApp.Elements.pinInput.value==='1234') { this.closeLogin(); this.grantAccess('manager'); } else { PicoApp.Elements.pinInput.classList.add('error'); setTimeout(()=>PicoApp.Elements.pinInput.classList.remove('error'), 400); } },
                 grantAccess: function(r) {
-                    PicoApp.State.currentRole = r; 
-                    PicoApp.Elements.startupScreen.classList.add('hidden');
-                    
-                    if(r==='pos') document.body.classList.add('pos-mode'); 
-                    else document.body.classList.remove('pos-mode');
-                    
-                    PicoApp.Elements.navItems.forEach(i => { 
-                        if (r === 'pos' && i.getAttribute('data-role') === 'manager') i.style.display = 'none'; 
-                        else i.style.display = 'flex'; 
-                    });
-                    
+                    PicoApp.State.currentRole = r; PicoApp.Elements.startupScreen.classList.add('hidden');
+                    if(r==='pos') document.body.classList.add('pos-mode'); else document.body.classList.remove('pos-mode');
+                    PicoApp.Elements.navItems.forEach(i => { if (r === 'pos' && i.getAttribute('data-role') === 'manager') i.style.display = 'none'; else i.style.display = 'flex'; });
                     PicoApp.Elements.profileRole.innerText = r==='manager' ? "Manager" : "Staff";
                     PicoApp.Router.navigate('dashboard', document.querySelector('.nav-item'));
                 },
-                
-                logout: function() { 
-                    PicoApp.Layout.closeAllMenus(); 
-                    PicoApp.Elements.startupScreen.classList.remove('hidden'); 
-                }
+                logout: function() { PicoApp.Layout.closeAllMenus(); PicoApp.Elements.startupScreen.classList.remove('hidden'); }
             },
 
             Router: {
@@ -6656,21 +6772,9 @@
                         PicoApp.Modules.Suppliers.renderList();
                     }
 
-                    // ΛΟΓΙΚΗ ΓΙΑ ΤΟ FULL-SCREEN ΤΙΜΟΛΟΓΙΟ
-                    if (id === 'invoice-new') {
-                        if(PicoApp.Elements.hdrFilters) PicoApp.Elements.hdrFilters.style.display = 'none';
-                        if(document.getElementById('hdr-invoice-actions')) document.getElementById('hdr-invoice-actions').style.display = 'flex';
-                        
-                        PicoApp.Elements.hdrTitle.innerText = "Νέο Τιμολόγιο / Αγορά";
-                        PicoApp.Elements.hdrSubtitle.innerText = "Καταχώρηση παραστατικού";
-                        PicoApp.Elements.hdrTitle.removeAttribute('data-i18n');
-                        PicoApp.Elements.hdrSubtitle.removeAttribute('data-i18n');
-                    } else {
-                        if(PicoApp.Elements.hdrFilters) {
-                            PicoApp.Elements.hdrFilters.style.display = 'flex';
-                            PicoApp.Elements.hdrFilters.style.opacity = (id.includes('myshop') || id === 'settings') ? '0' : '1';
-                        }
-                        if(document.getElementById('hdr-invoice-actions')) document.getElementById('hdr-invoice-actions').style.display = 'none';
+                    if(PicoApp.Elements.hdrFilters) {
+                        PicoApp.Elements.hdrFilters.style.display = 'flex';
+                        PicoApp.Elements.hdrFilters.style.opacity = (id.includes('myshop') || id === 'settings') ? '0' : '1';
                     }
                 }
             },
